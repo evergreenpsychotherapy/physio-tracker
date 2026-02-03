@@ -1,0 +1,40 @@
+function doPost(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var d = JSON.parse(e.postData.contents);
+
+  // Backup dropdown lists to a "Config" tab
+  if (d.action === "saveConfig") {
+    var cfg = ss.getSheetByName("Config") || ss.insertSheet("Config");
+    cfg.clear();
+    cfg.getRange(1, 1).setValue(JSON.stringify(d.config));
+    return ContentService.createTextOutput(JSON.stringify({ status: "saved" }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Default: append entry to first sheet
+  var sheet = ss.getSheets()[0];
+  sheet.appendRow([
+    d.date, d.time, d.client, d.locality,
+    d.fee, d.km, d.miles,
+    d.expenseType, d.expenseAmount, d.notes
+  ]);
+
+  return ContentService.createTextOutput(JSON.stringify({ status: "ok" }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// Restore dropdown lists (called via JSONP from the app)
+function doGet(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var callback = e.parameter.callback || "callback";
+  var result = { config: null };
+
+  var cfg = ss.getSheetByName("Config");
+  if (cfg) {
+    var val = cfg.getRange(1, 1).getValue();
+    if (val) result.config = JSON.parse(val);
+  }
+
+  return ContentService.createTextOutput(callback + "(" + JSON.stringify(result) + ")")
+    .setMimeType(ContentService.MimeType.JAVASCRIPT);
+}
